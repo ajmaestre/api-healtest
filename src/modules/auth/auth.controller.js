@@ -21,6 +21,9 @@ class AuthController {
 
   async provePassword(password_, password) {
     try {
+      // const pass_encrypt = await this.encryptPassword("admin");
+      // const rest = await user.updatePassword(2, pass_encrypt);
+      // if(rest) console.log("password changed")
       const result = await bcrypt.compare(password_, password);
       return result;
     } catch (error) {
