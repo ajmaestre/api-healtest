@@ -133,9 +133,12 @@ class UserService {
 
     async getUser(id) {
         try {
-            const query = `select id, name, lastname, email, username, telephone, role, created_at from users where id = ${id}`;
-            const { rows } = await connection.query(query);
-            return rows[0];
+            if(!isNaN(id)){
+                const query = `select id, name, lastname, email, username, telephone, role, created_at from users where id = ${id}`;
+                const { rows } = await connection.query(query);
+                return rows[0];
+            }
+            return false;
         } catch (error) {
             console.log(error)
             return false;
