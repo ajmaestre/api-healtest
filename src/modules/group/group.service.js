@@ -90,9 +90,12 @@ class GroupService {
 
     async getGroup(id) {
         try {
-            const query = `select * from groups where id = ${id}`;
-            const { rows } = await connection.query(query);
-            return rows[0];
+            if(!isNaN(id)){
+                const query = `select * from groups where id = ${id}`;
+                const { rows } = await connection.query(query);
+                return rows[0];
+            }
+            return false;
         } catch (error) {
             console.log(error)
             return false;
