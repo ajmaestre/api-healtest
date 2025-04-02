@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS activities (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255),
     type VARCHAR(10),
-    user_id INT REFERENCES users(id) ON DELETE CASCADE
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP
 );
 
@@ -719,4 +719,5 @@ CREATE TRIGGER insertStateActivityByGroupPatient
 AFTER UPDATE ON group_patient
 FOR EACH ROW
 EXECUTE PROCEDURE tr_insert_act_state_by_group_patient();
+
 
