@@ -111,6 +111,14 @@ CREATE TABLE IF NOT EXISTS crucigram (
     activity_id INT REFERENCES activities(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS task (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP,
+    activity_id INT REFERENCES activities(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS activity_group (
     id SERIAL PRIMARY KEY,
     activity_id INT REFERENCES activities(id) ON DELETE CASCADE,
@@ -130,6 +138,18 @@ CREATE TABLE IF NOT EXISTS activity_response (
     answer VARCHAR(10),
     index INT,
     position VARCHAR(10),
+    activity_id INT REFERENCES activities(id) ON DELETE CASCADE,
+    paciente_id INT REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS task_response (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    type VARCHAR(50),
+    realtype VARCHAR(255),
+    description TEXT,
+    data BYTEA,
+    created_at TIMESTAMP,
     activity_id INT REFERENCES activities(id) ON DELETE CASCADE,
     paciente_id INT REFERENCES users(id) ON DELETE CASCADE
 );
@@ -414,6 +434,42 @@ CREATE TRIGGER updateStateActivity
 AFTER INSERT ON activity_response
 FOR EACH ROW
 EXECUTE PROCEDURE tr_update_act_state();
+
+
+CREATE FUNCTION tr_update_act_task_state()
+RETURNS TRIGGER
+AS
+$$
+DECLARE 
+    v_activity_id INT;
+    v_patient_id INT;
+    v_state VARCHAR(10) := 'Terminada';
+BEGIN 
+
+    -- Obtener el paciente_id y activity_id del registro insertado
+    SELECT paciente_id, activity_id 
+    INTO v_patient_id, v_activity_id
+    FROM task_response
+    WHERE id = NEW.id;
+
+    -- Verificar si se encontró un registro válido
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No se encontró el registro en task_response para id=%', NEW.id;
+    END IF;
+
+    UPDATE activity_state SET state = v_state WHERE activity_id = v_activity_id AND paciente_id = v_patient_id;
+
+    RETURN NEW;
+
+END
+$$
+LANGUAGE plpgsql;
+
+-- Crear el trigger asociado
+CREATE TRIGGER updateStateActivityTask
+AFTER INSERT ON task_response
+FOR EACH ROW
+EXECUTE PROCEDURE tr_update_act_task_state();
 
 
 CREATE FUNCTION tr_insert_state_by_new_patient()
@@ -720,4 +776,16 @@ AFTER UPDATE ON group_patient
 FOR EACH ROW
 EXECUTE PROCEDURE tr_insert_act_state_by_group_patient();
 
+
+INSERT INTO users (name, lastname, telephone, username, email, password, role, created_at)  
+VALUES (
+    'Administrador',
+    'Admin',
+    '33344445555',
+    'cardim',
+    'administrador@gmail.com',
+    '$2a$10$RXpRh7RbyjKln7xwl.EhhuusNkQDZQJQVqa8diz2LMboBAg5a3Yfq',
+    'admin',
+    current_timestamp
+);
 

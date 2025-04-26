@@ -1,11 +1,14 @@
 
 const express = require('express');
+var multer = require('multer');
 const activityService = require('./activity.service');
 const authController = require('../auth/auth.controller');
 
 const route = express.Router();
 const activity = new activityService();
 const auth = new authController();
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 
 const activityRoute = (app) => {
@@ -96,6 +99,18 @@ const activityRoute = (app) => {
         }
     })
 
+    route.get('/tasks/:id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await activity.getTaskByActivity(req.params.id);
+            if(result){
+                return res.status(200).json(result)
+            }
+            return res.status(200).json([])
+        } catch (error) {
+            return res.status(500).json([])
+        }
+    })
+
     route.get('/cricigrams-response/:id', [auth.verifyToken, auth.isPatient], async (req, res) => {
         try {
             const result = await activity.getResponseByPatientAndAct(req.userId, req.params.id);
@@ -120,9 +135,67 @@ const activityRoute = (app) => {
         } 
     })
 
+    route.get('/tasks-bydoctor/:user_id/:activity_id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const file = await activity.getResponseTaskByPatientAndAct(req.params.user_id, req.params.activity_id);
+            res.setHeader('Content-Type', file.realtype);
+            res.send(file.data);
+        } catch (error) {
+            return res.status(500).json([])
+        } 
+    })
+
+    route.get('/tasks-data-bydoctor/:user_id/:activity_id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await activity.getResourseTaskDataByPatientAndAct(req.params.user_id, req.params.activity_id);
+            if(result){
+                return res.status(200).json(result)
+            }
+            return res.status(200).json({})
+        } catch (error) {
+            return res.status(500).json({})
+        }
+    })
+
+    route.get('/tasks-bypatient/:activity_id', [auth.verifyToken, auth.isPatient], async (req, res) => {
+        try {
+            const file = await activity.getResponseTaskByPatientAndAct(req.userId, req.params.activity_id);
+            res.setHeader('Content-Type', file.realtype);
+            res.send(file.data);
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json([])
+        } 
+    })
+
+    route.get('/tasks-data-bypatient/:activity_id', [auth.verifyToken, auth.isPatient], async (req, res) => {
+        try {
+            const result = await activity.getResourseTaskDataByPatientAndAct(req.userId, req.params.activity_id);
+            if(result){
+                return res.status(200).json(result)
+            }
+            return res.status(200).json({})
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json([])
+        } 
+    })
+
     route.get('/cricigrams-by-patient/:id', [auth.verifyToken, auth.isPatient], async (req, res) => {
         try {
             const result = await activity.getCrucisByPatient(req.params.id);
+            if(result){
+                return res.status(200).json(result)
+            }
+            return res.status(200).json([])
+        } catch (error) {
+            return res.status(500).json([])
+        }
+    })
+
+    route.get('/tasks-by-patient/:id', [auth.verifyToken, auth.isPatient], async (req, res) => {
+        try {
+            const result = await activity.getTaskByPatient(req.params.id);
             if(result){
                 return res.status(200).json(result)
             }
@@ -243,9 +316,43 @@ const activityRoute = (app) => {
         }
     });
 
+    route.post('/save-task', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await activity.saveActivity(req.userId, req.body);
+            if(result.id){
+                const result_ = await activity.saveTask(result.id, req.body.task);
+                if(result_.id){
+                    return res.status(200).json({response: true}); 
+                }
+            }
+            return res.status(200).json({response: false});
+        } catch (error) {
+            return res.status(500).json({response: false})
+        }
+    });
+
     route.post('/save-response', [auth.verifyToken], async (req, res) => {
         try {
             const result_ = await activity.saveActivityResponse(req.userId, req.body.id, [...req.body.horizontals, ...req.body.verticals]);
+            if(result_.id){
+                return res.status(200).json({response: true}); 
+            }
+            return res.status(200).json({response: false});
+        } catch (error) {
+            return res.status(500).json({response: false})
+        }
+    });
+
+    route.patch('/save-task-response/:id', [auth.verifyToken], upload.single('data'), async (req, res) => {
+        try {
+            const data = {
+                name: req.body.name,
+                type: req.body.type,
+                realtype: req.body.realtype,
+                description: req.body.description,
+                data: req.file.buffer,
+            };
+            const result_ = await activity.saveTaskResponse(req.userId, req.params.id, data);
             if(result_.id){
                 return res.status(200).json({response: true}); 
             }
@@ -280,6 +387,51 @@ const activityRoute = (app) => {
             return res.status(200).json({response: false});
         } catch (error) {
             console.log(error)
+            return res.status(500).json({response: false});
+        }
+    })
+
+    route.patch('/update-task/:id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await activity.updateTask(req.params.id, req.body);
+            if(result.id){
+                return res.status(200).json({response: true}); 
+            }
+            return res.status(200).json({response: false});
+        } catch (error) {
+            return res.status(500).json({response: false});
+        }
+    })
+
+    route.patch('/update-response-task/:id', [auth.verifyToken], upload.single('data'), async (req, res) => {
+        try {
+            let data;
+            let response;
+            if(req.file?.buffer){
+                data = {
+                    name: req.body.name,
+                    type: req.body.type,
+                    realtype: req.body.realtype,
+                    description: req.body.description,
+                    data: req.file.buffer,
+                };
+                const result = await activity.updateResponseDataTask(req.userId, req.params.id, data);
+                response = result;
+            }else{
+                data = {
+                    name: req.body.name,
+                    type: req.body.type,
+                    realtype: req.body.realtype,
+                    description: req.body.description
+                };
+                const result = await activity.updateResponseTask(req.userId, req.params.id, data);
+                response = result;
+            }
+            if(response.id){
+                return res.status(200).json({response: true}); 
+            }
+            return res.status(200).json({response: false});
+        } catch (error) {
             return res.status(500).json({response: false});
         }
     })

@@ -83,6 +83,42 @@ const statRoute = (app) => {
         }
     });
 
+    route.get('/test-bypatient/:id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await stat.getCountTestByPatient(req.params.id);
+            if(result){
+                return res.status(200).json(result);
+            }
+            return res.status(200).json([]);
+        } catch (error) {
+            return res.status(500).json([])
+        }
+    });
+
+    route.get('/act-bypatient/:id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await stat.getCountActByPatient(req.params.id);
+            if(result){
+                return res.status(200).json(result);
+            }
+            return res.status(200).json([]);
+        } catch (error) {
+            return res.status(500).json([])
+        }
+    });
+
+    route.get('/act-type-bypatient/:id', [auth.verifyToken, auth.isAdminOrDoctor], async (req, res) => {
+        try {
+            const result = await stat.getCountTypeActByPatient(req.params.id);
+            if(result){
+                return res.status(200).json(result);
+            }
+            return res.status(200).json([]);
+        } catch (error) {
+            return res.status(500).json([])
+        }
+    });
+
 }
 
 module.exports = { statRoute };

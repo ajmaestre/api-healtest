@@ -85,6 +85,52 @@ class StatService {
         }
     }
 
+    async getCountTestByPatient(patient_id){
+        try {
+            const query = `select count(*), ts.state as state from group_test as gt
+                            inner join group_patient as gp
+                            on gt.group_id = gp.group_id and gp.paciente_id = ${patient_id}
+                            inner join test_state as ts
+                            on ts.test_id = gt.test_id and ts.paciente_id = ${patient_id} group by ts.state`;
+            const { rows } = await connection.query(query);
+            return rows;
+        } catch (error) {
+            console.log(error)
+            return false;
+        }
+    }
+
+    async getCountActByPatient(patient_id){
+        try {
+            const query = `select count(*), acs.state as state from activity_group as ag
+                            inner join group_patient as gp
+                            on ag.group_id = gp.group_id and gp.paciente_id = ${patient_id}
+                            inner join activity_state as acs
+                            on acs.activity_id = ag.activity_id and acs.paciente_id = ${patient_id} group by acs.state`;
+            const { rows } = await connection.query(query);
+            return rows;
+        } catch (error) {
+            console.log(error)
+            return false;
+        }
+    }
+
+    async getCountTypeActByPatient(patient_id){
+        try {
+            const query = `select count(*), a.type as state from activity_group as ag
+                            inner join group_patient as gp
+                            on ag.group_id = gp.group_id and gp.paciente_id = ${patient_id}
+                            inner join activities as a
+                            on a.id = ag.activity_id group by a.type`;
+            const { rows } = await connection.query(query);
+            return rows;
+        } catch (error) {
+            console.log(error)
+            return false;
+        }
+    }
+
 }
 
 module.exports = StatService;
+
